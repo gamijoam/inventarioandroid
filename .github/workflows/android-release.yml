@@ -1,9 +1,13 @@
 name: Android APK
 
-# Se ejecuta al subir un tag (ej. v0.1.0) o manualmente desde la pestaña Actions.
+# - Tag v* (ej. v0.1.0)            -> Release "Inventario 0.1.0"
+# - Push a la rama principal         -> pre-release "build-N" (solo si cambió la app)
+# - Manual (Actions > Run workflow)  -> pre-release "build-N"
 on:
   push:
     tags: ["v*"]
+    branches: [main, ccr-43e95da0-ca2dyh]
+    paths: ["app/**", ".github/workflows/android-release.yml"]
   workflow_dispatch:
 
 permissions:
