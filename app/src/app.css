@@ -43,8 +43,8 @@ button {
 }
 button.primary { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 button:disabled { opacity: 0.6; }
-button.link { border: none; background: none; padding: 4px 0; }
-.danger { color: var(--danger); }
+button.link { border: none; background: none; padding: 4px 0; color: var(--primary); }
+button.link.danger, .danger { color: var(--danger); }
 
 label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 12px; }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
@@ -97,3 +97,71 @@ label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 12p
 }
 .sheet h2 { margin-top: 0; }
 .actions { margin-top: 8px; }
+
+/* ---------- v0.2: navegación, tasas, ajustes, actualizaciones ---------- */
+:root { --warn: #b45309; --warn-bg: #fef3c7; --ok: #15803d; --tabs-h: 64px; }
+@media (prefers-color-scheme: dark) {
+  :root { --warn: #fbbf24; --warn-bg: #3a2e12; --ok: #4ade80; }
+}
+select {
+  width: 100%; padding: 12px; margin-top: 4px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--card); color: inherit; font: inherit;
+}
+.page { padding-bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom)); }
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  display: flex; background: var(--card); border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabs button {
+  flex: 1; border: none; border-radius: 0; background: none; padding: 8px 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 12px; color: var(--muted); height: var(--tabs-h);
+}
+.tabs button.active { color: var(--primary); font-weight: 600; }
+.tabs .ico { font-size: 20px; }
+.fab { bottom: calc(var(--tabs-h) + 16px + env(safe-area-inset-bottom)); }
+
+.alert {
+  width: 100%; text-align: left; margin-bottom: 12px; font-size: 14px;
+  background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn);
+}
+.warn { color: var(--warn); }
+.ok { color: var(--ok); }
+.equiv { font-size: 13px; color: var(--muted); }
+.margin { margin: -4px 0 12px; }
+.badge {
+  display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted); margin-left: 4px;
+}
+.warn-badge { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); }
+
+.rate-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rate-value { font-size: 22px; font-weight: 600; margin: 10px 0 2px; }
+.rate-form { margin-top: 10px; align-items: flex-end; }
+.rate-form input { margin-top: 0; }
+.rate-form button { flex: 0 0 auto; }
+.hist { list-style: none; padding: 0; margin: 4px 0 0; font-size: 14px; }
+.hist li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+.settings section { margin-bottom: 14px; }
+.settings h3 { margin: 0 0 10px; }
+.label { font-size: 14px; color: var(--muted); margin: 12px 0 4px; }
+.checks, .tipos { list-style: none; padding: 0; margin: 0 0 8px; }
+.check { display: flex; align-items: center; gap: 10px; color: var(--text); margin: 0; padding: 8px 0; }
+.check input { width: 20px; height: 20px; margin: 0; flex: none; }
+.tipos li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.tipos li form { flex: 1; }
+.tipos li form input { margin-top: 0; }
+.tipo-acciones { display: flex; gap: 12px; }
+.settings form.row button { flex: 0 0 auto; }
+.settings form.row input { margin-top: 0; }
+.sticky-error { position: sticky; top: 70px; background: var(--card); padding: 8px; border-radius: 8px; z-index: 2; }
+
+.center-modal { align-items: center; padding: 16px; z-index: 20; }
+.update { width: 100%; max-width: 420px; }
+.update h2 { margin: 0 0 4px; }
+.notas { white-space: pre-line; background: var(--bg); padding: 10px; border-radius: 10px; font-size: 14px; }
+.bar { height: 10px; background: var(--bg); border-radius: 999px; overflow: hidden; margin: 12px 0 4px; }
+.bar div { height: 100%; background: var(--primary); transition: width 0.2s; }
+.center-text { text-align: center; }

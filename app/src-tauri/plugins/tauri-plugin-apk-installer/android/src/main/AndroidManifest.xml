@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Necesario para abrir el instalador de paquetes con una APK descargada. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <application>
+        <!-- Subclase propia para no chocar con otros FileProvider de la app. -->
+        <provider
+            android:name="com.inventario.apkinstaller.ApkFileProvider"
+            android:authorities="${applicationId}.apkinstaller.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/apkinstaller_file_paths" />
+        </provider>
+    </application>
+</manifest>

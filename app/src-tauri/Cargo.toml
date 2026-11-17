@@ -1,6 +1,6 @@
 [package]
 name = "inventario"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [lib]
@@ -19,6 +19,15 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 argon2 = { version = "0.5", features = ["std"] }
 uuid = { version = "1", features = ["v7"] }
 thiserror = "2"
+tauri-plugin-apk-installer = { version = "0.1.0", path = "plugins/tauri-plugin-apk-installer" }
+rust_decimal = { version = "1.43.0", features = ["maths"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+semver = "1.0.28"
+sha2 = "0.11.1"
+hex = "0.4.3"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+futures-util = { version = "0.3.34", default-features = false }
+tokio = { version = "1.54.1", features = ["fs", "io-util"] }
 
 [dev-dependencies]
 tempfile = "3"

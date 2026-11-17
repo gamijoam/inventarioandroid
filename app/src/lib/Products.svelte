@@ -1,25 +1,28 @@
 <script>
   import { onMount } from "svelte";
   import { api } from "./api.js";
+  import { cfg, monedaInfo } from "./config.svelte.js";
+  import { formatMoney } from "./money.js";
   import ProductForm from "./ProductForm.svelte";
 
-  let { user, onLogout } = $props();
+  let { user, onSesionExpirada, irATasas } = $props();
 
   let products = $state([]);
   let search = $state("");
   let error = $state("");
   let editing = $state(null); // null = cerrado, {} = nuevo, producto = editar
   let confirmId = $state(null); // producto pendiente de confirmar eliminación
-
-  const money = new Intl.NumberFormat("es", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let tasasViejas = $state([]); // tasas por defecto sin cargar hoy
 
   async function load() {
     try {
       error = "";
       products = await api.listProducts(search);
+      const vig = await api.tasasVigentes();
+      tasasViejas = vig.filter((t) => t.es_defecto && t.desactualizada);
     } catch (err) {
       error = String(err);
-      if (error.includes("iniciar sesión")) onLogout();
+      if (error.includes("iniciar sesión")) onSesionExpirada();
     }
   }
 
@@ -58,12 +61,19 @@
 <header class="topbar">
   <div>
     <strong>Productos</strong>
-    <div class="muted small">{user.nombre}</div>
+    <div class="muted small">{user.nombre} · base {cfg.moneda_base}</div>
   </div>
-  <button onclick={onLogout}>Salir</button>
 </header>
 
 <main class="content">
+  {#if tasasViejas.length}
+    <button class="alert" onclick={irATasas}>
+      ⚠ {tasasViejas.length === 1 ? "La tasa" : "Las tasas"} de
+      {tasasViejas.map((t) => t.moneda).join(", ")}
+      {tasasViejas.some((t) => !t.tasa) ? "no se ha cargado" : "no es de hoy"}. Toca para actualizar.
+    </button>
+  {/if}
+
   <input class="search" type="search" placeholder="Buscar por nombre o SKU" bind:value={search} oninput={onSearch} />
 
   {#if error}<p class="error">{error}</p>{/if}
@@ -77,10 +87,13 @@
           <button class="item-main" onclick={() => (editing = p)}>
             <span class="name">{p.nombre}</span>
             <span class="muted small">SKU {p.sku}</span>
+            <span class="stock" class:low={p.stock === 0}>Stock: {p.stock}</span>
           </button>
           <div class="item-side">
-            <span class="price">{money.format(p.precio)}</span>
-            <span class="stock" class:low={p.stock === 0}>Stock: {p.stock}</span>
+            <span class="price">{formatMoney(p.precio, monedaInfo(p.moneda))}</span>
+            {#each p.equivalentes as eq}
+              <span class="equiv">{formatMoney(eq.precio, monedaInfo(eq.moneda))}</span>
+            {/each}
             <button class="link danger" onclick={() => remove(p)}>
               {confirmId === p.id ? "¿Seguro? Toca otra vez" : "Eliminar"}
             </button>

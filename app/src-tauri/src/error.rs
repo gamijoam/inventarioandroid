@@ -12,6 +12,8 @@ pub enum AppError {
     Validation(String),
     #[error("Producto no encontrado")]
     NotFound,
+    #[error("{0}")]
+    Update(String),
     #[error("Error interno: {0}")]
     Internal(String),
 }
