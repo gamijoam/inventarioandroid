@@ -64,6 +64,39 @@ npm run tauri android dev
 npm run tauri android build
 ```
 
+## Descargar la APK (GitHub Actions)
+
+El workflow `.github/workflows/android-release.yml` compila la APK, la firma y la publica en **Releases**.
+
+- **Publicar una versión:** crea y sube un tag. La versión de la app se toma del tag.
+  ```bash
+  git tag v0.1.1
+  git push origin v0.1.1
+  ```
+- **Compilar a mano:** pestaña *Actions* → *Android APK* → *Run workflow*. Crea un pre-release `build-N`.
+
+Desde el teléfono, abre el Release, descarga `Inventario-X.Y.Z.apk` e instálala (Android pedirá permitir apps de origen desconocido).
+
+### Firma (recomendado)
+
+Sin configurar nada, cada build se firma con una llave temporal, así que para actualizar hay que desinstalar la versión anterior (y se pierden los datos). Para que las actualizaciones se instalen encima, crea **una sola vez** una llave:
+
+```bash
+keytool -genkeypair -keystore release.jks -alias inventario -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 release.jks   # copia el resultado
+```
+
+y en GitHub → *Settings → Secrets and variables → Actions* agrega:
+
+| Secreto | Valor |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | salida de `base64 -w0 release.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | contraseña del keystore |
+| `ANDROID_KEY_ALIAS` | `inventario` |
+| `ANDROID_KEY_PASSWORD` | contraseña de la llave (normalmente la misma) |
+
+Guarda `release.jks` en un lugar seguro y **nunca lo subas al repositorio**: si lo pierdes, no podrás publicar actualizaciones con la misma firma.
+
 ## Pruebas
 
 ```bash

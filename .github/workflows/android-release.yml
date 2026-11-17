@@ -1,0 +1,130 @@
+name: Android APK
+
+# Se ejecuta al subir un tag (ej. v0.1.0) o manualmente desde la pestaña Actions.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # necesario para crear el Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      NDK_VERSION: "27.2.12479018"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Versión: del tag (v1.2.3 -> 1.2.3) o 0.1.<n° de ejecución> si es manual.
+      # Android usa esta versión para calcular el versionCode, que debe subir en cada release.
+      - name: Calcular versión
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            TAG="$GITHUB_REF_NAME"
+          else
+            VERSION="0.1.${GITHUB_RUN_NUMBER}"
+            TAG="build-${GITHUB_RUN_NUMBER}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+          echo "Versión: $VERSION"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar NDK
+        working-directory: .
+        run: |
+          sdkmanager --install "ndk;${NDK_VERSION}" > /dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - run: npm ci
+
+      - name: Generar proyecto Android
+        run: npm run tauri android init -- --ci
+
+      # APK universal para teléfonos ARM de 64 y 32 bits (prácticamente todos los Android reales).
+      - name: Compilar APK
+        run: npm run tauri android build -- --apk --target aarch64 --target armv7 --ci
+
+      - name: Firmar APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          UNSIGNED=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release-unsigned.apk' | head -1)
+          echo "APK sin firmar: $UNSIGNED"
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+
+          if [[ -n "${KEYSTORE_BASE64:-}" ]]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEY_NOTE=Firmada con la llave de release del proyecto." >> "$GITHUB_ENV"
+          else
+            # Sin secretos configurados: llave temporal. La APK se instala, pero cada
+            # build tendrá una firma distinta y habrá que desinstalar antes de actualizar.
+            KEYSTORE_PASSWORD=temporal123; KEY_ALIAS=temporal; KEY_PASSWORD=temporal123
+            keytool -genkeypair -keystore "$RUNNER_TEMP/release.jks" -storepass "$KEYSTORE_PASSWORD" \
+              -keypass "$KEY_PASSWORD" -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Inventario, O=Inventario, C=VE"
+            echo "::warning::No hay secretos ANDROID_KEYSTORE_*: se usó una llave temporal."
+            echo "KEY_NOTE=⚠️ Firmada con una llave temporal: para actualizar, desinstala la versión anterior." >> "$GITHUB_ENV"
+          fi
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$UNSIGNED" "$RUNNER_TEMP/aligned.apk"
+          OUT="$GITHUB_WORKSPACE/Inventario-${VERSION}.apk"
+          "$BUILD_TOOLS/apksigner" sign --ks "$RUNNER_TEMP/release.jks" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" --ks-key-alias "$KEY_ALIAS" --key-pass "pass:$KEY_PASSWORD" \
+            --out "$OUT" "$RUNNER_TEMP/aligned.apk"
+          "$BUILD_TOOLS/apksigner" verify "$OUT"
+          echo "APK=$OUT" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Inventario-${{ env.VERSION }}-apk
+          path: ${{ env.APK }}
+
+      - name: Publicar Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Inventario ${{ env.VERSION }}
+          prerelease: ${{ github.ref_type != 'tag' }}
+          files: ${{ env.APK }}
+          body: |
+            APK de Inventario ${{ env.VERSION }}.
+
+            **Instalar:** descarga `Inventario-${{ env.VERSION }}.apk` en tu teléfono, ábrela y permite
+            "Instalar apps de origen desconocido" si Android lo pide.
+
+            Usuario inicial: `admin` / `admin123`.
+
+            ${{ env.KEY_NOTE }}
